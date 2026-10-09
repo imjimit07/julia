@@ -308,6 +308,14 @@ endif
 JL_PRIVATE_LIBS-0 += $(JL_RUNTIME_LIBS-0) $(JL_RUNTIME_CODEGEN_LIBS-0)
 JL_PRIVATE_LIBS-1 += $(JL_RUNTIME_LIBS-1) $(JL_RUNTIME_CODEGEN_LIBS-1)
 
+# DLLs that dependencies leave in the build's bin directory but nothing loads: unversioned
+# copies of versioned DLLs (`libstdc++.dll` is only for linking during the build), PCRE2
+# variants other than 8-bit, libuv (linked statically), and LLVM's LTO, remarks and MLIR
+# runtime libraries
+WINNT_UNUSED_DLLS := libstdc++.dll libgmp.dll libgmpxx.dll libmpfr.dll libpcre2-8.dll \
+	libpcre2-16%.dll libpcre2-32%.dll libpcre2-posix%.dll libuv%.dll \
+	libLTO.dll libRemarks.dll libmlir_%.dll
+
 # Note that we disable MSYS2's path munging here, as otherwise
 # it replaces our `:`-separated list as a `;`-separated one.
 define stringreplace
@@ -324,7 +332,7 @@ install: $(build_depsbindir)/stringreplace $(BUILDROOT)/doc/_build/html/en/index
 
 	$(INSTALL_M) $(JULIA_EXECUTABLE_$(JULIA_BUILD_MODE)) $(DESTDIR)$(bindir)/
 ifeq ($(OS),WINNT)
-	$(INSTALL_M) $(wildcard $(build_bindir)/*.dll) $(DESTDIR)$(bindir)/
+	$(INSTALL_M) $(filter-out $(addprefix $(build_bindir)/,$(WINNT_UNUSED_DLLS)),$(wildcard $(build_bindir)/*.dll)) $(DESTDIR)$(bindir)/
 ifeq ($(JULIA_BUILD_MODE),release)
 	$(INSTALL_M) $(build_libdir)/libjulia.dll.a $(DESTDIR)$(libdir)/
 	$(INSTALL_M) $(build_libdir)/libjulia-internal.dll.a $(DESTDIR)$(libdir)/
@@ -633,7 +641,7 @@ ifeq ($(OS), Linux)
 	-cp $(build_datarootdir)/julia/cert.pem $(DESTDIR)$(datarootdir)/julia/
 endif
 ifeq ($(OS), WINNT)
-	cd $(BUILDROOT)/julia-$(JULIA_COMMIT)/bin && rm -f llvm* llc.exe lli.exe opt.exe LTO.dll bugpoint.exe macho-dump.exe
+	cd $(BUILDROOT)/julia-$(JULIA_COMMIT)/bin && rm -f llvm* llc.exe lli.exe opt.exe bugpoint.exe macho-dump.exe
 endif
 	cd $(BUILDROOT) && $(TAR) -zcvf $(JULIA_BINARYDIST_FILENAME).tar.gz julia-$(JULIA_COMMIT)
 
